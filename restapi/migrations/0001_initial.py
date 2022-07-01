@@ -3,7 +3,7 @@
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-
+import restapi.constants
 
 class Migration(migrations.Migration):
 
@@ -18,15 +18,15 @@ class Migration(migrations.Migration):
             name='Category',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200)),
+                ('name', models.CharField(max_length=CATEGORY_MAX_LENGTH)),
             ],
         ),
         migrations.CreateModel(
             name='Expenses',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('description', models.CharField(max_length=200)),
-                ('total_amount', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('description', models.CharField(max_length=EXPENSES_MAX_LENGTH)),
+                ('total_amount', models.DecimalField(decimal_places=DECIMAL_PLACES, max_digits=MAX_DIGITS)),
                 ('category', models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='restapi.category')),
             ],
         ),
@@ -34,8 +34,8 @@ class Migration(migrations.Migration):
             name='UserBalance',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('amount_owed', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('amount_lent', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('amount_owed', models.DecimalField(decimal_places=DECIMAL_PLACES, max_digits=MAX_DIGITS)),
+                ('amount_lent', models.DecimalField(decimal_places=DECIMAL_PLACES, max_digits=MAX_DIGITS)),
                 ('expense', models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='users', to='restapi.expenses')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
             name='Groups',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
+                ('name', models.CharField(max_length=GROUPS_MAX_LENGTH)),
                 ('members', models.ManyToManyField(blank=True, related_name='members', to=settings.AUTH_USER_MODEL)),
             ],
         ),
