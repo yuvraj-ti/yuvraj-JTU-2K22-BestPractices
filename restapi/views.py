@@ -4,6 +4,7 @@ from decimal import Decimal
 import pandas as pd
 import numpy as np
 import urllib.request
+import concurrent.futures
 from datetime import datetime
 
 from django.http import HttpResponse
@@ -264,9 +265,11 @@ def multi_Threaded_Reader(urls, num_threads):
         Read multiple files through HTTP
     """
     result = []
-    for url in urls:
-        data = reader(url, 60)
-        data = data.decode('utf-8')
-        result.extend(data.split("\n"))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        future_to_url = {executor.submit(load_url, url, HTTP_TIMEOUT): url for url in urls}
+        for future in concurrent.futures.as_completed(future_to_url):
+            url = future_to_url[future]
+            data = future.result()
+            result.extend(data.split("\n"))    
     result = sorted(result, key=lambda elem:elem[1])
     return result
