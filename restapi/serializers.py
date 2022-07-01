@@ -46,6 +46,7 @@ class Expenses_Serializer(ModelSerializer):
         expense = Expenses.objects.create(**validated_data)
         for eu in expense_users:
             UserExpense.objects.create(expense=expense, **eu)
+        
         return expense
 
     def update(self, instance, validated_data):

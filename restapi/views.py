@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+import time
 from decimal import Decimal
 import pandas as pd
 import numpy as np
@@ -21,7 +22,9 @@ from restapi.models import *
 from restapi.serializers import *
 from restapi.custom_exception import *
 
+import logging
 
+logging.basicConfig(level = logging.INFO , format = '%(asctime)s : %(levelname)s : %(message)s')
 
 def index(_request)-> HttpResponse:
     return HttpResponse("Hello, world. You're at Rest.")
@@ -30,11 +33,14 @@ def index(_request)-> HttpResponse:
 @api_view(['POST'])
 def logout(request)->Response:
     request.user.auth_token.delete()
+    logging.info('views.py : post logout : user logged out')
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET'])
 def balance(request) -> Response:
+    start = int(time.time() * 1000.0)
+    logging.info('views.py: GET balance func starts running')
     user = request.user
     expenses = Expenses.objects.filter(users__in=user.expenses.all())
     final_balance = {}
@@ -50,10 +56,13 @@ def balance(request) -> Response:
     final_balance = {k: v for k, v in final_balance.items() if v != 0}
 
     response = [{"user": k, "amount": int(v)} for k, v in final_balance.items()]
+    end = int(time.time()*1000.0);
+    logging.info(f'views.py: GET balance: calculation of final balance took {start-end} ms')
     return Response(response, status=status.HTTP_200_OK)
 
 
 def normalize(expense) -> list:
+    start = int(time.time() * 1000.0)
     user_balances = expense.users.all()
     dues = {}
     for user_balance in user_balances:
@@ -73,6 +82,8 @@ def normalize(expense) -> list:
             start += 1
         else:
             end -= 1
+    end = int(time.time()*1000.0);
+    logging.info(f'views.py: normalize: normalize of expense took {start-end} ms')
     return balances
 
 
@@ -112,6 +123,7 @@ class group_view_set(ModelViewSet):
     def members(self, request, pk=None)->Response:
         group = Groups.objects.get(id=pk)
         if group not in self.get_queryset():
+            logging.error('views.py: members : group not in self.get_queryset()')
             raise Unauthorized_User_Exception()
         body = request.data
         if body.get('add', None) is not None and body['add'].get('user_ids', None) is not None:
@@ -123,15 +135,18 @@ class group_view_set(ModelViewSet):
             for user_id in removed_ids:
                 group.members.remove(user_id)
         group.save()
+        logging.info('views.py: members : group saved in database')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['get'], detail=True)
     def expenses(self, _request, pk=None)->Response:
         group = Groups.objects.get(id=pk)
         if group not in self.get_queryset():
+            logging.error('views.py: expenses: group not in self.get_queryset()')
             raise Unauthorized_User_Exception()
         expenses = group.expenses_set
         serializer = Expenses_Serializer(expenses, many=True)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['get'], detail=True)
@@ -186,9 +201,11 @@ def logProcessor(request) -> Response:
     num_threads = data['parallelFileProcessingCount']
     log_files = data['logFiles']
     if num_threads <= 0 or num_threads > 30:
+        logging.error('views.py: logProcessor: number of threads not compatible')
         return Response({"status": "failure", "reason": "Parallel Processing Count out of expected bounds"},
                         status=status.HTTP_400_BAD_REQUEST)
     if len(log_files) == 0:
+        logging.error('views.py: logProcessor: no log file present')
         return Response({"status": "failure", "reason": "No log files provided in request"},
                         status=status.HTTP_400_BAD_REQUEST)
     logs = multi_Threaded_Reader(urls=data['logFiles'], num_threads=data['parallelFileProcessingCount'])
@@ -196,6 +213,7 @@ def logProcessor(request) -> Response:
     cleaned = transform(sorted_logs)
     data = aggregate(cleaned)
     response = response_format(data)
+    logging.info('views.py: logprocessor: logs processed successfully')
     return Response({"response":response}, status=status.HTTP_200_OK)
 
 def sort_by_time_stamp(logs)-> list:
@@ -204,6 +222,7 @@ def sort_by_time_stamp(logs)-> list:
         data.append(log.split(" "))
     # print(data)
     data = sorted(data, key=lambda elem: elem[1])
+    logging.info('views.py: sort_by_time_stamp: sorted successfully')
     return data
 
 def response_format(raw_data)->list:
@@ -216,6 +235,7 @@ def response_format(raw_data)->list:
             logs.append({'exception': exception, 'count': count})
         entry['logs'] = logs
         response.append(entry)
+    logging.info('views.py: response_format: response is formatted usinng raw_data.items')
     return response
 
 def aggregate(cleaned_logs)->dict:
@@ -225,6 +245,7 @@ def aggregate(cleaned_logs)->dict:
         value = data.get(key, {})
         value[text] = value.get(text, 0)+1
         data[key] = value
+    logging.info('views.py: aggregate: data aggregated from cleaned_logs')
     return data
 
 
@@ -251,7 +272,8 @@ def transform(logs)->list:
 
         result.append([key, text])
         print(key)
-
+    end = int(time.time()*1000.0);
+    logging.info(f'views.py: transform: it took {start-end} ms')
     return result
 
 
@@ -269,7 +291,13 @@ def multi_Threaded_Reader(urls, num_threads)->list:
         future_to_url = {executor.submit(load_url, url, HTTP_TIMEOUT): url for url in urls}
         for future in concurrent.futures.as_completed(future_to_url):
             url = future_to_url[future]
-            data = future.result()
-            result.extend(data.split("\n"))    
+            try:
+                data = future.result()
+            except Exception as exc:
+                logging.error('%r generated an exception: %s' % (url, exc))
+                raise Exception('%r generated an exception: %s' % (url, exc))
+            else:
+                logging.error('%r page is %d bytes' % (url, len(data)))
+                result.extend(data.split("\n"))    
     result = sorted(result, key=lambda elem:elem[1])
     return result
