@@ -5,14 +5,14 @@ from rest_framework.authtoken import views
 from restapi.views import user_view_set, category_view_set, group_view_set, expenses_view_set, index, logout, balance, \
     logProcessor
 
-
+    
 router = DefaultRouter()
 router.register('users', user_view_set)
 router.register('categories', category_view_set)
 router.register('groups', group_view_set)
 router.register('expenses', expenses_view_set)
 
-urlpatterns = [
+url_patterns = [
     path('', index, name='index'),
     path('auth/logout/', logout),
     path('auth/login/', views.obtain_auth_token),
@@ -20,4 +20,4 @@ urlpatterns = [
     path('process-logs/', logProcessor)
 ]
 
-urlpatterns += router.urls
+url_patterns += router.urls

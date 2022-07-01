@@ -23,7 +23,7 @@ class Expenses(models.Model):
     category = models.ForeignKey(Category, default=1, on_delete=models.CASCADE)
 
 
-class UserExpense(models.Model):
+class User_Expense(models.Model):
     expense = models.ForeignKey(Expenses, default=1, on_delete=models.CASCADE, related_name="users")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="expenses")
     amount_owed = models.DecimalField(max_digits=10, decimal_places=2)

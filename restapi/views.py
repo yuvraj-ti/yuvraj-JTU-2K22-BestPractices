@@ -77,19 +77,19 @@ def normalize(expense):
 
 class user_view_set(ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = User_Serializer
     permission_classes = (AllowAny,)
 
 
 class category_view_set(ModelViewSet):
     queryset = Category.objects.all()
-    serializer_class = CategorySerializer
+    serializer_class = Category_Serializer
     http_method_names = ['get', 'post']
 
 
 class group_view_set(ModelViewSet):
     queryset = Groups.objects.all()
-    serializer_class = GroupSerializer
+    serializer_class = Group_Serializer
 
     def get_queryset(self):
         user = self.request.user
@@ -111,7 +111,7 @@ class group_view_set(ModelViewSet):
     def members(self, request, pk=None):
         group = Groups.objects.get(id=pk)
         if group not in self.get_queryset():
-            raise UnauthorizedUserException()
+            raise Unauthorized_User_Exception()
         body = request.data
         if body.get('add', None) is not None and body['add'].get('user_ids', None) is not None:
             added_ids = body['add']['user_ids']
@@ -128,20 +128,20 @@ class group_view_set(ModelViewSet):
     def expenses(self, _request, pk=None):
         group = Groups.objects.get(id=pk)
         if group not in self.get_queryset():
-            raise UnauthorizedUserException()
+            raise Unauthorized_User_Exception()
         expenses = group.expenses_set
-        serializer = ExpensesSerializer(expenses, many=True)
+        serializer = Expenses_Serializer(expenses, many=True)
         return Response(serializer.data, status=200)
 
     @action(methods=['get'], detail=True)
     def balances(self, _request, pk=None):
         group = Groups.objects.get(id=pk)
         if group not in self.get_queryset():
-            raise UnauthorizedUserException()
+            raise Unauthorized_User_Exception()
         expenses = Expenses.objects.filter(group=group)
         dues = {}
         for expense in expenses:
-            user_balances = UserExpense.objects.filter(expense=expense)
+            user_balances = User_Expense.objects.filter(expense=expense)
             for user_balance in user_balances:
                 dues[user_balance.user] = dues.get(user_balance.user, 0) + user_balance.amount_lent \
                                           - user_balance.amount_owed
@@ -166,7 +166,7 @@ class group_view_set(ModelViewSet):
 
 class expenses_view_set(ModelViewSet):
     queryset = Expenses.objects.all()
-    serializer_class = ExpensesSerializer
+    serializer_class = Expenses_Serializer
 
     def get_queryset(self):
         user = self.request.user
@@ -190,7 +190,7 @@ def logProcessor(request):
     if len(log_files) == 0:
         return Response({"status": "failure", "reason": "No log files provided in request"},
                         status=status.HTTP_400_BAD_REQUEST)
-    logs = multiThreadedReader(urls=data['logFiles'], num_threads=data['parallelFileProcessingCount'])
+    logs = multi_Threaded_Reader(urls=data['logFiles'], num_threads=data['parallelFileProcessingCount'])
     sorted_logs = sort_by_time_stamp(logs)
     cleaned = transform(sorted_logs)
     data = aggregate(cleaned)
@@ -259,7 +259,7 @@ def reader(url, timeout):
         return conn.read()
 
 
-def multiThreadedReader(urls, num_threads):
+def multi_Threaded_Reader(urls, num_threads):
     """
         Read multiple files through HTTP
     """

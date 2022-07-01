@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from restapi.models import Category, Groups, UserExpense, Expenses
 
 
-class UserSerializer(ModelSerializer):
+class User_Serializer(ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
@@ -18,28 +18,28 @@ class UserSerializer(ModelSerializer):
         }
 
 
-class CategorySerializer(ModelSerializer):
+class Category_Serializer(ModelSerializer):
     class Meta(object):
         model = Category
         fields = '__all__'
 
 
-class GroupSerializer(ModelSerializer):
-    members = UserSerializer(many=True, required=False)
+class Group_Serializer(ModelSerializer):
+    members = User_Serializer(many=True, required=False)
 
     class Meta(object):
         model = Groups
         fields = '__all__'
 
 
-class UserExpenseSerializer(ModelSerializer):
+class User_Expense_Serializer(ModelSerializer):
     class Meta(object):
         model = UserExpense
         fields = ['user', 'amount_owed', 'amount_lent']
 
 
-class ExpensesSerializer(ModelSerializer):
-    users = UserExpenseSerializer(many=True, required=True)
+class Expenses_Serializer(ModelSerializer):
+    users = User_Expense_Serializer(many=True, required=True)
 
     def create(self, validated_data):
         expense_users = validated_data.pop('users')
